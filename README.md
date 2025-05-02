@@ -1,1 +1,2 @@
 # Stroke-pericyte-reprogramming
+Code for: Loan A, Awaja N, Lui M, Syal C, Sun Y, Sarma SN, Chona R, Johnston WB, Cordova A, Saraf D, Nakhlé A, O'Connor K, Thomas J, Leung J, Seegobin M, He L, Wondisford FE, Picketts DJ, Tsai EC, Chan HM, Wang J. Single-cell profiling of brain pericyte heterogeneity following ischemic stroke unveils distinct pericyte subtype-targeted neural reprogramming potential and its underlying mechanisms. Theranostics. 2024 Sep 23;14(16):6110-6137. doi: 10.7150/thno.97165. PMID: 39431007; PMCID: PMC11488099.
