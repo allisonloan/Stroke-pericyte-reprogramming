@@ -1,0 +1,478 @@
+
+```{r}
+library(Seurat)
+library(dplyr)
+library(tidyverse)
+library(scCustomize)
+```
+
+#Load in data
+```{r}
+Ng2_stroke <- Read10X("../Ng2 stroke/filtered_feature_bc_matrix//")
+```
+
+```{r}
+Ng2_nonstroke <- Read10X("../Ng2 nonstroke/filtered_feature_bc_matrix//")
+```
+
+```{r}
+Ng2_naive <- Read10X("../Ng2 naive/filtered_feature_bc_matrix//")
+```
+
+# Only include genes expressed in >= 3 cells 
+# Cells with >= 200 detected genes
+```{r}
+Ng2_stroke <- CreateSeuratObject(Ng2_stroke,
+                             min.cells = 3,
+                             min.features = 200,
+                             project = "stroke_ng2")
+Ng2_stroke <- RenameCells(Ng2_stroke, add.cell.id = "Stroke")
+head(colnames(Ng2_stroke))
+```
+
+```{r}
+Ng2_nonstroke <- CreateSeuratObject(Ng2_nonstroke,
+                             min.cells = 3,
+                             min.features = 200,
+                             project = "nonstroke_ng2")
+Ng2_nonstroke <- RenameCells(Ng2_nonstroke, add.cell.id = "Nonstroke")
+head(colnames(Ng2_nonstroke))
+```
+
+```{r}
+Ng2_naive <- CreateSeuratObject(Ng2_naive,
+                             min.cells = 3,
+                             min.features = 200,
+                             project = "naive_ng2")
+Ng2_naive <- RenameCells(Ng2_naive, add.cell.id = "Naive")
+head(colnames(Ng2_naive))
+```
+
+#Filter out 1) high number of UMIs but only a few number of genes (dying/blood cells) 2) low genes and low UMIs (molecules) (less than 500) (poor quality) 3) high mitochondrial
+#Naive
+```{r}
+Ng2_naive$percent.mito <- PercentageFeatureSet(Ng2_naive, pattern = "^mt-")
+Ng2_naive$percent.ribo <- PercentageFeatureSet(Ng2_naive, pattern ="^Rp[sl]")
+
+## Get filtering parameters
+count.max <- round(mean(Ng2_naive$nCount_RNA) + 2 * sd(Ng2_naive$nCount_RNA), digits = -2)
+count.min <- round(mean(Ng2_naive$nCount_RNA) - 2 * sd(Ng2_naive$nCount_RNA), digits = -2)
+feat.max <- round(mean(Ng2_naive$nFeature_RNA) + 2 * sd(Ng2_naive$nFeature_RNA), digits = -2)
+feat.min <- round(mean(Ng2_naive$nFeature_RNA) - 2 * sd(Ng2_naive$nFeature_RNA), digits = -2)
+
+## Set minimum parameters to 0 if negative value
+if (count.min < 0){
+   count.min <- 0
+} else {
+   count.min <- count.min
+}
+  
+if (feat.min < 0){
+   feat.min <- 0
+} else {
+   feat.min <- feat.min
+}
+
+## Filter cells
+Ng2_naive <- subset(Ng2_naive, subset = nFeature_RNA > feat.min & nFeature_RNA < feat.max & nCount_RNA < count.max & nCount_RNA > count.min & percent.mito < 12)
+
+VlnPlot(Ng2_naive, c("nCount_RNA", "nFeature_RNA","percent.mito"), pt.size=0.1,
+        ncol = 3)
+hist(Ng2_naive$percent.mito, breaks =100)
+FeatureScatter(Ng2_naive, feature1 = "nCount_RNA", feature2 = "percent.mito")
+FeatureScatter(Ng2_naive, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+hist(Ng2_naive$nFeature_RNA, breaks =50)
+hist(Ng2_naive$nCount_RNA, breaks =50)
+```
+#Nonstroke
+```{r}
+Ng2_nonstroke$percent.mito <- PercentageFeatureSet(Ng2_nonstroke, pattern = "^mt-")
+Ng2_nonstroke$percent.ribo <- PercentageFeatureSet(Ng2_nonstroke, pattern ="^Rp[sl]")
+
+## Get filtering parameters
+count.max <- round(mean(Ng2_nonstroke$nCount_RNA) + 2 * sd(Ng2_nonstroke$nCount_RNA), digits = -2)
+count.min <- round(mean(Ng2_nonstroke$nCount_RNA) - 2 * sd(Ng2_nonstroke$nCount_RNA), digits = -2)
+feat.max <- round(mean(Ng2_nonstroke$nFeature_RNA) + 2 * sd(Ng2_nonstroke$nFeature_RNA), digits = -2)
+feat.min <- round(mean(Ng2_nonstroke$nFeature_RNA) - 2 * sd(Ng2_nonstroke$nFeature_RNA), digits = -2)
+
+## Set minimum parameters to 0 if negative value
+if (count.min < 0){
+   count.min <- 0
+} else {
+   count.min <- count.min
+}
+  
+if (feat.min < 0){
+   feat.min <- 0
+} else {
+   feat.min <- feat.min
+}
+
+## Filter cells
+Ng2_nonstroke <- subset(Ng2_nonstroke, subset = nFeature_RNA > feat.min & nFeature_RNA < feat.max & nCount_RNA < count.max & nCount_RNA > count.min & percent.mito < 12)
+
+VlnPlot(Ng2_nonstroke, c("nCount_RNA", "nFeature_RNA","percent.mito"), pt.size=0.1,
+        ncol = 3)
+hist(Ng2_nonstroke$percent.mito, breaks =20)
+FeatureScatter(Ng2_nonstroke, feature1 = "nCount_RNA", feature2 = "percent.mito")
+FeatureScatter(Ng2_nonstroke, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+hist(Ng2_nonstroke$nFeature_RNA, breaks =50)
+hist(Ng2_nonstroke$nCount_RNA, breaks =50)
+```
+
+#Stroke
+````{r}
+Ng2_stroke$percent.mito <- PercentageFeatureSet(Ng2_stroke, pattern = "^mt-")
+Ng2_stroke$percent.ribo <- PercentageFeatureSet(Ng2_stroke, pattern ="^Rp[sl]")
+
+## Get filtering parameters
+count.max <- round(mean(Ng2_stroke$nCount_RNA) + 2 * sd(Ng2_stroke$nCount_RNA), digits = -2)
+count.min <- round(mean(Ng2_stroke$nCount_RNA) - 2 * sd(Ng2_stroke$nCount_RNA), digits = -2)
+feat.max <- round(mean(Ng2_stroke$nFeature_RNA) + 2 * sd(Ng2_stroke$nFeature_RNA), digits = -2)
+feat.min <- round(mean(Ng2_stroke$nFeature_RNA) - 2 * sd(Ng2_stroke$nFeature_RNA), digits = -2)
+
+## Set minimum parameters to 0 if negative value
+if (count.min < 0){
+   count.min <- 0
+} else {
+   count.min <- count.min
+}
+  
+if (feat.min < 0){
+   feat.min <- 0
+} else {
+   feat.min <- feat.min
+}
+
+
+Ng2_stroke <- subset(Ng2_stroke, subset = nFeature_RNA > feat.min & nFeature_RNA < feat.max & nCount_RNA < count.max & nCount_RNA > count.min & percent.mito < 12)
+
+VlnPlot(Ng2_stroke, c("nCount_RNA", "nFeature_RNA","percent.mito"), pt.size=0.1,
+        ncol = 3)
+hist(Ng2_stroke$percent.mito, breaks =100)
+FeatureScatter(Ng2_stroke, feature1 = "nCount_RNA", feature2 = "percent.mito")
+FeatureScatter(Ng2_stroke, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+hist(Ng2_stroke$nFeature_RNA, breaks =50)
+hist(Ng2_stroke$nCount_RNA, breaks =50)
+```
+#SCT integrate data
+```{r}
+remove <- c('Gm42418','AY036118')
+Ng2_naive <- subset(Ng2_naive,features=setdiff(rownames(Ng2_naive),remove))
+Ng2_nonstroke <- subset(Ng2_nonstroke,features=setdiff(rownames(Ng2_nonstroke),remove))
+Ng2_stroke <- subset(Ng2_stroke,features=setdiff(rownames(Ng2_stroke),remove))
+
+
+obj.list <- list(Ng2_naive, Ng2_nonstroke, Ng2_stroke)
+obj.list <- lapply(obj.list, FUN = SCTransform)
+
+# select integration features
+features <- SelectIntegrationFeatures(object.list = obj.list, nfeatures = 3000)
+obj.list <- PrepSCTIntegration(object.list = obj.list, anchor.features = features)
+
+# find integration anchors (CCA)
+anchors <- FindIntegrationAnchors(object.list = obj.list, normalization.method = "SCT",
+    anchor.features = features)
+combined.sct <- IntegrateData(anchorset = anchors, normalization.method = "SCT")
+
+# Scale data, run PCA and UMAP and visualize integrated data
+seurat_ng2 <- RunPCA(combined.sct, verbose = FALSE)
+```
+
+#Dimentionality
+```{r}
+ElbowPlot(seurat_ng2, ndims = 20)
+# Determine percent of variation associated with each PC
+pct <- seurat_ng2[["pca"]]@stdev / sum(seurat_ng2[["pca"]]@stdev) * 100
+
+# Calculate cumulative percents for each PC
+cumu <- cumsum(pct)
+
+# Determine which PC exhibits cumulative percent greater than 90% and % variation associated with the PC as less than 5
+co1 <- which(cumu > 90 & pct < 5)[1]
+
+co1
+co2 <- sort(which((pct[1:length(pct) - 1] - pct[2:length(pct)]) > 0.1), decreasing = T)[1] + 1
+
+# last point where change of % of variation is more than 0.1%.
+co2
+pcs <- min(co1, co2)
+pcs
+
+# Create a dataframe with values
+plot_df <- data.frame(pct = pct, 
+           cumu = cumu, 
+           rank = 1:length(pct))
+
+# Elbow plot to visualize 
+  ggplot(plot_df, aes(cumu, pct, label = rank, color = rank > pcs)) + 
+  geom_text() + 
+  geom_vline(xintercept = 90, color = "grey") + 
+  geom_hline(yintercept = min(pct[pct > 5]), color = "grey") +
+  theme_bw()
+
+```
+#figure 2b
+```{r}
+seurat_ng2 <- RunUMAP(seurat_ng2, dims = 1:13)
+seurat_ng2 <- FindNeighbors(seurat_ng2, dims=1:13)
+
+seurat_ng2 <- FindClusters(seurat_ng2, resolution = 0.4)
+
+DefaultAssay(seurat_ng2) <- "integrated"
+DimPlot(seurat_ng2)
+DimPlot(seurat_ng2, label = T)
+```
+#figure 2c-d
+```{r}
+naive_ng2 <- subset(seurat_ng2, orig.ident == 'naive_ng2')
+DimPlot(naive_ng2, label = F)
+stroke_ng2 <- subset(seurat_ng2, orig.ident == 'stroke_ng2')
+DimPlot(stroke_ng2, label = F)
+nonstroke_ng2 <- subset(seurat_ng2, orig.ident == 'nonstroke_ng2')
+DimPlot(nonstroke_ng2, label = F)
+prop.table(table(Idents(naive_ng2)))
+prop.table(table(Idents(nonstroke_ng2)))
+prop.table(table(Idents(stroke_ng2)))
+```
+
+```{r}
+DefaultAssay(seurat_ng2) <- "RNA"
+seurat_ng2 <- ScaleData(seurat_ng2)
+seurat_ng2 <- NormalizeData(seurat_ng2)
+
+saveRDS(seurat_ng2, file="../Output/final files/seurat_processed_strokeng2.rds")
+seurat_ng2 <- readRDS(file="../Output/final files/seurat_processed_strokeng2.rds")
+```
+
+# sup figure 2a
+```{r}
+cluster_markers_ng2 <- FindAllMarkers(seurat_ng2,
+                                    logfc.threshold = 0.25,
+                                    only.pos = T)
+top100ng2<-cluster_markers_ng2 %>%
+    group_by(cluster)%>%
+    top_n(100,avg_log2FC)
+write.csv(top100ng2, file="../Output/final files/cluster_markers_ng2.csv", quote=F)
+
+top5 <-  cluster_markers_ng2 %>% group_by(cluster) %>% top_n(n = 5, wt = avg_log2FC)
+DoHeatmap(seurat_ng2, features = top5$gene)
+```
+# 2e
+```{r}
+FeaturePlot_scCustom(seurat_ng2, features = "Jun", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Abcc9", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Pdgfrb", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Vtn", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Sox2", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Pdgfra", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Fabp7", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Acta2", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Mog", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Cldn5", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Pdgfra", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Fabp7", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Sox2", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Nnmt", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "C1qa", na_color = "lightgrey")
+```
+
+# sup figure 2b
+```{r}
+seurat_ng2 <- CellCycleScoring(seurat_ng2, s.features = cc.genes.updated.2019$s.genes,
+                           g2m.features = cc.genes.updated.2019$g2m.genes)
+DimPlot(seurat_ng2, group.by = "Phase")
+```
+
+#sup figure 2c
+```{r}
+FeaturePlot_scCustom(seurat_ng2, features = "Vim", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Dbi", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Mki67", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Smc2", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Tpx2", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Nusap1", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Cdca8", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Top2a", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_ng2, features = "Hmgb2", na_color = "lightgrey")
+```
+
+#Monocle
+```{r}
+#if (!requireNamespace("BiocManager", quietly = TRUE))
+#install.packages("BiocManager")
+#BiocManager::install(version = "3.17")
+#BiocManager::install(c('BiocGenerics','DelayedArray','DelayedMatrixStats','limma','lme4','S4Vectors','SingleCellExperiment','SummarizedExperiment','batchelor', 'HDF5Array','terra','ggrastr'))
+#install.packages("devtools")
+#install.packages("R.utils")
+#devtools::install_github('cole-trapnell-lab/monocle3')
+#remotes::install_github('satijalab/seurat-wrappers')
+library(Seurat)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(monocle3)
+library(SeuratWrappers)
+```
+
+```{r}
+seurat_ng2_mon <- readRDS("/Users/allisonloan/Documents/PhD Work/Stroke Single-Cell seq Analysis/Output/final files/seurat_processed_strokeng2.rds")
+DefaultAssay(seurat_ng2_mon) <- "integrated"
+```
+
+#Figure 2F
+```{r}
+#if (!requireNamespace("BiocManager", quietly = TRUE))
+#install.packages("BiocManager")
+#BiocManager::install(version = "3.17")
+#BiocManager::install(c('BiocGenerics','DelayedArray','DelayedMatrixStats','limma','lme4','S4Vectors','SingleCellExperiment','SummarizedExperiment','batchelor', 'HDF5Array','terra','ggrastr'))
+#install.packages("devtools")
+#install.packages("R.utils")
+#devtools::install_github('cole-trapnell-lab/monocle3')
+#remotes::install_github('satijalab/seurat-wrappers')
+library(Seurat)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(monocle3)
+library(SeuratWrappers)
+
+seurat_ng2_mon <- readRDS("/Users/allisonloan/Documents/PhD Work/Stroke Single-Cell seq Analysis/Output/final files/seurat_processed_strokeng2.rds")
+DefaultAssay(seurat_ng2_mon) <- "integrated"
+
+cds <- as.cell_data_set(seurat_ng2_mon)
+cds
+colData(cds)
+fData(cds)
+rownames(fData(cds))[1:10]
+
+# since it misses the gene_short_name column, let's add it
+fData(cds)$gene_short_name <- rownames(fData(cds))
+
+# to get counts
+counts(cds)
+
+# assign paritions
+reacreate.partition <- c(rep(1,length(cds@colData@rownames)))
+names(reacreate.partition) <- cds@colData@rownames
+reacreate.partition <- as.factor(reacreate.partition)
+cds@clusters$UMAP$partitions <- reacreate.partition
+
+# Assign the cluster info 
+
+list_cluster <- seurat_ng2_mon@active.ident
+cds@clusters$UMAP$clusters <- list_cluster
+
+# Assign UMAP coordinate - cell embeddings
+
+cds@int_colData@listData$reducedDims$UMAP <- seurat_ng2_mon@reductions$umap@cell.embeddings
+
+# ...3. Learn trajectory graph ------------------------
+cds <- learn_graph(cds, use_partition = FALSE)
+
+plot_cells(cds,
+           color_cells_by = 'cluster',
+           label_groups_by_cluster = FALSE,
+           label_branch_points = FALSE,
+           label_roots = FALSE,
+           label_leaves = FALSE,
+           group_label_size = 5)
+
+# ...4. Order the cells in pseudotime -------------------
+cds <- order_cells(cds, reduction_method = 'UMAP', root_cells = colnames(cds[,clusters(cds) == 0]))
+
+
+plot_cells(cds,
+           color_cells_by = 'pseudotime',
+           label_groups_by_cluster = FALSE,
+           label_branch_points = FALSE,
+           label_roots = F,
+           label_leaves = FALSE)
+```
+
+#scvelo
+```{r}
+DimPlot(seurat_ng2)
+DefaultAssay(seurat_ng2) <- "RNA"
+show_col(hue_pal()(11))
+```
+
+
+#prepare figure 2g
+```{r}
+library(Seurat)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(scales)
+library(SeuratDisk)
+library(SeuratWrappers)
+
+DimPlot(seurat_ng2)
+data <- seurat_ng2@meta.data
+data = subset(data, select = -c(integrated_snn_res.0.4))
+data$UMAP1 <- Embeddings(seurat_ng2, 'umap')[,1]
+data$UMAP2 <- Embeddings(seurat_ng2, 'umap')[,2]
+data$PC1 <- Embeddings(seurat_ng2, 'pca')[,1]
+data$PC2 <- Embeddings(seurat_ng2, 'pca')[,2]
+data <-tidyr::separate(data, orig.ident, c("CellID"), sep="-", extra="merge")
+data$Barcode <- rownames(data)
+data$Barcode <- gsub("-1","x", data$Barcode) 
+data$Barcode <- gsub("Naive_","wang_220414_count_NG2-Crexai14-Naive:", data$Barcode)
+data$Barcode <- gsub("Nonstroke_","wang_220531_count_NG2-Crexai14-non-Stroke:", data$Barcode)
+data$Barcode <- gsub("Stroke_","wang_220414_220531_count_NG2-Crexai14-Stroke:", data$Barcode)
+
+annotation <- data.frame(CellID = c("naive_ng2", "nonstroke_ng2", "stroke_ng2"),
+                         "Group" = c("naive_ng2", "nonstroke_ng2", "stroke_ng2"))
+data <- dplyr::left_join(data, annotation, by="CellID")
+
+write.csv(data, file=paste0("../scvelo/seurat_ng2_metadata.csv"), quote=F, row.names = F)
+write.csv(rownames(seurat_ng2), file="../scvelo/seurat_ng2_genes.csv", quote=F,row.names = F)
+
+#Split
+data_naive_ng2  <- filter(data, Group == "naive_ng2")
+data_nonstroke_ng2 <- filter(data, Group == "nonstroke_ng2")
+data_stroke_ng2 <- filter(data, Group == "stroke_ng2")
+
+write.csv(data_naive_ng2, file=paste0("../scvelo/Naive_ng2_metadata.csv"), quote=F, row.names = F)
+
+write.csv(data_nonstroke_ng2, file=paste0("../scvelo/Nonstroke_ng2_metadata.csv"), quote=F, row.names = F)
+
+write.csv(data_stroke_ng2, file=paste0("../scvelo/Stroke_ng2_metadata.csv"), quote=F, row.names = F)
+```
+
+#GO
+```{r}
+library(clusterProfiler)
+c1v7 <- FindMarkers(seurat_ng2, ident.1 = "7", ident.2= "1")
+write.csv(c1v7, file="../Output/final files/c1v7_deg.csv", quote=F)
+
+#sup figure 3a
+EnhancedVolcano(c1v7, 
+                rownames(c1v7),
+                x ="avg_log2FC", 
+                y ="p_val_adj")
+
+genec1v7 <- rownames(c1v7[c1v7$avg_log2FC > .25 & c1v7$p_val_adj < 0.05,])
+GOresultsc1v7bp <- enrichGO(gene = genec1v7 , OrgDb = "org.Mm.eg.db", keyType = "SYMBOL", ont = "BP")
+GOresultsc1v7cc <- enrichGO(gene = genec1v7 , OrgDb = "org.Mm.eg.db", keyType = "SYMBOL", ont = "CC")
+
+#sup figure 2h
+as.data.frame(GOresultsc1v7bp)
+barplot(GOresultsc1v7bp)
+
+#sup figure 3b
+barplot(GOresultsc1v7cc)
+```
+
+#NCBI submission
+```{r}
+write.csv(as.matrix(seurat_ng2[["RNA"]]@counts), file="../umi_matrix_ng2.csv")
+
+seurat_ng2 = subset(seurat_ng2@meta.data, select =
+-c(integrated_snn_res.0.4))
+write.csv(as.matrix(seurat_ng2), file="../metadata_ng2.csv")
+```
+
+
+

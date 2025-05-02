@@ -1,0 +1,492 @@
+
+```{r}
+library(Seurat)
+library(dplyr)
+library(tidyverse)
+library(patchwork)
+library(scCustomize)
+library(ggplot2)
+```
+
+#Load in data
+```{r}
+Tbx18_stroke <- Read10X("../Tbx18 stroke/filtered_feature_bc_matrix/")
+```
+  
+```{r}
+Tbx18_nonstroke <- Read10X("../Tbx18 nonstroke/filtered_feature_bc_matrix/")
+```
+
+```{r}
+Tbx18_naive <- Read10X("../Tbx18 naive/filtered_feature_bc_matrix//")
+```
+
+# Only include genes expressed in >= 10 cells 
+# Cells with >= 200 detected genes
+```{r}
+Tbx18_stroke <- CreateSeuratObject(Tbx18_stroke,
+                             min.cells = 3,
+                             min.features = 200,
+                             project = "stroke_tbx18")
+Tbx18_stroke <- RenameCells(Tbx18_stroke, add.cell.id = "Stroke")
+head(colnames(Tbx18_stroke))
+```
+
+```{r}
+Tbx18_nonstroke <- CreateSeuratObject(Tbx18_nonstroke,
+                             min.cells = 3,
+                             min.features = 200,
+                             project = "nonstroke_tbx18")
+Tbx18_nonstroke <- RenameCells(Tbx18_nonstroke, add.cell.id = "Nonstroke")
+head(colnames(Tbx18_nonstroke))
+```
+
+```{r}
+Tbx18_naive <- CreateSeuratObject(Tbx18_naive,
+                             min.cells = 3,
+                             min.features = 200,
+                             project = "naive_tbx18")
+Tbx18_naive <- RenameCells(Tbx18_naive, add.cell.id = "Naive")
+head(colnames(Tbx18_naive))
+```
+
+#Filter Tbx18
+#Filter out 1) high number of counts but only a few number of genes (dying/blood cells) 2) low genes and low count (poor quality) 3) high mitochondrial
+
+#Naive
+```{r}
+Tbx18_naive$percent.mito <- PercentageFeatureSet(Tbx18_naive, pattern = "^mt-")
+Tbx18_naive$percent.ribo <- PercentageFeatureSet(Tbx18_naive, pattern ="^Rp[sl]")
+
+## Get filtering parameters
+count.max <- round(mean(Tbx18_naive$nCount_RNA) + 2 * sd(Tbx18_naive$nCount_RNA), digits = -2)
+count.min <- round(mean(Tbx18_naive$nCount_RNA) - 2 * sd(Tbx18_naive$nCount_RNA), digits = -2)
+feat.max <- round(mean(Tbx18_naive$nFeature_RNA) + 2 * sd(Tbx18_naive$nFeature_RNA), digits = -2)
+feat.min <- round(mean(Tbx18_naive$nFeature_RNA) - 2 * sd(Tbx18_naive$nFeature_RNA), digits = -2)
+
+## Set minimum parameters to 0 if negative value
+if (count.min < 0){
+   count.min <- 0
+} else {
+   count.min <- count.min
+}
+  
+if (feat.min < 0){
+   feat.min <- 0
+} else {
+   feat.min <- feat.min
+}
+
+## Filter cells
+Tbx18_naive <- subset(Tbx18_naive, subset = nFeature_RNA > feat.min & nFeature_RNA < feat.max & nCount_RNA < count.max & nCount_RNA > count.min & percent.mito < 12)
+
+VlnPlot(Tbx18_naive, c("nCount_RNA", "nFeature_RNA","percent.mito"), pt.size=0.1,
+        ncol = 3)
+hist(Tbx18_naive$percent.mito, breaks =100)
+FeatureScatter(Tbx18_naive, feature1 = "nCount_RNA", feature2 = "percent.mito")
+FeatureScatter(Tbx18_naive, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+hist(Tbx18_naive$nFeature_RNA, breaks =50)
+hist(Tbx18_naive$nCount_RNA, breaks =50)
+```
+#Nonstroke
+```{r}
+Tbx18_nonstroke$percent.mito <- PercentageFeatureSet(Tbx18_nonstroke, pattern = "^mt-")
+Tbx18_nonstroke$percent.ribo <- PercentageFeatureSet(Tbx18_nonstroke, pattern ="^Rp[sl]")
+
+## Get filtering parameters
+count.max <- round(mean(Tbx18_nonstroke$nCount_RNA) + 2 * sd(Tbx18_nonstroke$nCount_RNA), digits = -2)
+count.min <- round(mean(Tbx18_nonstroke$nCount_RNA) - 2 * sd(Tbx18_nonstroke$nCount_RNA), digits = -2)
+feat.max <- round(mean(Tbx18_nonstroke$nFeature_RNA) + 2 * sd(Tbx18_nonstroke$nFeature_RNA), digits = -2)
+feat.min <- round(mean(Tbx18_nonstroke$nFeature_RNA) - 2 * sd(Tbx18_nonstroke$nFeature_RNA), digits = -2)
+
+## Set minimum parameters to 0 if negative value
+if (count.min < 0){
+   count.min <- 0
+} else {
+   count.min <- count.min
+}
+  
+if (feat.min < 0){
+   feat.min <- 0
+} else {
+   feat.min <- feat.min
+}
+
+## Filter cells
+Tbx18_nonstroke <- subset(Tbx18_nonstroke, subset = nFeature_RNA > feat.min & nFeature_RNA < feat.max & nCount_RNA < count.max & nCount_RNA > count.min & percent.mito < 12)
+
+VlnPlot(Tbx18_nonstroke, c("nCount_RNA", "nFeature_RNA","percent.mito"), pt.size=0.1,
+        ncol = 3)
+hist(Tbx18_nonstroke$percent.mito, breaks =100)
+FeatureScatter(Tbx18_nonstroke, feature1 = "nCount_RNA", feature2 = "percent.mito")
+FeatureScatter(Tbx18_nonstroke, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+hist(Tbx18_nonstroke$nFeature_RNA, breaks =50)
+hist(Tbx18_nonstroke$nCount_RNA, breaks =50)
+```
+
+#Stroke
+````{r}
+Tbx18_stroke$percent.mito <- PercentageFeatureSet(Tbx18_stroke, pattern = "^mt-")
+Tbx18_stroke$percent.ribo <- PercentageFeatureSet(Tbx18_stroke, pattern ="^Rp[sl]")
+
+## Get filtering parameters
+count.max <- round(mean(Tbx18_stroke$nCount_RNA) + 2 * sd(Tbx18_stroke$nCount_RNA), digits = -2)
+count.min <- round(mean(Tbx18_stroke$nCount_RNA) - 2 * sd(Tbx18_stroke$nCount_RNA), digits = -2)
+feat.max <- round(mean(Tbx18_stroke$nFeature_RNA) + 2 * sd(Tbx18_stroke$nFeature_RNA), digits = -2)
+feat.min <- round(mean(Tbx18_stroke$nFeature_RNA) - 2 * sd(Tbx18_stroke$nFeature_RNA), digits = -2)
+
+## Set minimum parameters to 0 if negative value
+if (count.min < 0){
+   count.min <- 0
+} else {
+   count.min <- count.min
+}
+  
+if (feat.min < 0){
+   feat.min <- 0
+} else {
+   feat.min <- feat.min
+}
+
+
+Tbx18_stroke <- subset(Tbx18_stroke, subset = nFeature_RNA > feat.min & nFeature_RNA < feat.max & nCount_RNA < count.max & nCount_RNA > count.min & percent.mito < 12)
+
+VlnPlot(Tbx18_stroke, c("nCount_RNA", "nFeature_RNA","percent.mito"), pt.size=0.1,
+        ncol = 3)
+hist(Tbx18_stroke$percent.mito, breaks =100)
+FeatureScatter(Tbx18_stroke, feature1 = "nCount_RNA", feature2 = "percent.mito")
+FeatureScatter(Tbx18_stroke, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+hist(Tbx18_stroke$nFeature_RNA, breaks =50)
+hist(Tbx18_stroke$nCount_RNA, breaks =50)
+```
+
+```{r}
+remove <- c('Gm42418','AY036118')
+Tbx18_naive <- subset(Tbx18_naive,features=setdiff(rownames(Tbx18_naive),remove))
+Tbx18_nonstroke <- subset(Tbx18_nonstroke,features=setdiff(rownames(Tbx18_nonstroke),remove))
+Tbx18_stroke <- subset(Tbx18_stroke,features=setdiff(rownames(Tbx18_stroke),remove))
+
+obj.list <- list(Tbx18_naive, Tbx18_nonstroke, Tbx18_stroke)
+obj.list <- lapply(obj.list, FUN =SCTransform)
+
+# select integration features
+features <- SelectIntegrationFeatures(object.list = obj.list, nfeatures = 3000)
+obj.list <- PrepSCTIntegration(object.list = obj.list, anchor.features = features)
+
+# find integration anchors (CCA)
+anchors <- FindIntegrationAnchors(object.list = obj.list, normalization.method = "SCT",
+    anchor.features = features)
+combined.sct <- IntegrateData(anchorset = anchors, normalization.method = "SCT")
+
+# Scale data, run PCA and UMAP and visualize integrated data
+seurat_tbx18 <- RunPCA(combined.sct, verbose = FALSE)
+```
+#Dimentionality
+```{r}
+ElbowPlot(seurat_tbx18, ndims = 40)
+# Determine percent of variation associated with each PC
+pct <- seurat_tbx18[["pca"]]@stdev / sum(seurat_tbx18[["pca"]]@stdev) * 100
+
+# Calculate cumulative percents for each PC
+cumu <- cumsum(pct)
+
+# Determine which PC exhibits cumulative percent greater than 90% and % variation associated with the PC as less than 5
+co1 <- which(cumu > 90 & pct < 5)[1]
+co2 <- sort(which((pct[1:length(pct) - 1] - pct[2:length(pct)]) > 0.1), decreasing = T)[1] + 1
+
+# last point where change of % of variation is more than 0.1%.
+pcs <- min(co1, co2)
+pcs
+
+# Create a dataframe with values
+plot_df <- data.frame(pct = pct, 
+           cumu = cumu, 
+           rank = 1:length(pct))
+
+# Elbow plot to visualize 
+  ggplot(plot_df, aes(cumu, pct, label = rank, color = rank > pcs)) + 
+  geom_text() + 
+  geom_vline(xintercept = 90, color = "grey") + 
+  geom_hline(yintercept = min(pct[pct > 5]), color = "grey") +
+  theme_bw()
+```
+
+```{r}
+seurat_tbx18 <- RunUMAP(seurat_tbx18, dims=1:15)
+seurat_tbx18 <- FindNeighbors(seurat_tbx18, dims=1:15)
+
+seurat_tbx18 <- FindClusters(seurat_tbx18, resolution = c(0.1, 0.2, 0.3, 0.5))
+p1 <- DimPlot(seurat_tbx18, group.by = "integrated_snn_res.0.1", label = T) 
+p2 <- DimPlot(seurat_tbx18, group.by = "integrated_snn_res.0.2", label = T)
+p4 <- DimPlot(seurat_tbx18, group.by = "integrated_snn_res.0.3", label = T)
+p3 <- DimPlot(seurat_tbx18, group.by = "integrated_snn_res.0.5", label = T)
+
+
+p1 + p2 + p3 + p4
+seurat_tbx18 <- FindClusters(seurat_tbx18, resolution = 0.1)
+DefaultAssay(seurat_tbx18) <- "integrated"
+```
+#Figure b-d
+```{r}
+DimPlot(seurat_tbx18)
+show_col(hue_pal()(6))
+show_col(hue_pal()(7))
+palette <- c("#F8766D",  "#C49A00","#53B400","#00C094", "#00B6EB",  "#A58AFF")
+naive_tbx18 <- subset(seurat_tbx18, orig.ident == 'naive_tbx18')
+DimPlot(naive_tbx18, cols = palette)
+
+stroke_tbx18 <- subset(seurat_tbx18, orig.ident == 'stroke_tbx18')
+DimPlot(stroke_tbx18)
+
+nonstroke_tbx18 <- subset(seurat_tbx18, orig.ident == 'nonstroke_tbx18')
+DimPlot(nonstroke_tbx18)
+
+prop.table(table(Idents(naive_tbx18)))
+prop.table(table(Idents(nonstroke_tbx18)))
+prop.table(table(Idents(stroke_tbx18)))
+
+```
+
+```{r}
+DefaultAssay(seurat_tbx18) <- "RNA"
+seurat_tbx18 <- ScaleData(seurat_tbx18)
+seurat_tbx18 <- NormalizeData(seurat_tbx18)
+
+saveRDS(seurat_tbx18, file="../Output/final files/seurat_processed_stroketbx18.rds")
+seurat_tbx18 <- readRDS(file="../Output/final files/seurat_processed_stroketbx18.rds")
+```
+
+#Sup figure 4a
+```{r}
+cluster_markers_tbx18 <- FindAllMarkers(seurat_tbx18,
+                                    logfc.threshold = 0.25,
+                                    only.pos = T)
+top100<-cluster_markers_tbx18 %>%
+    group_by(cluster)%>%
+    top_n(100,avg_log2FC)
+write.csv(top100, file="../Output/final files/cluster_markers_tbx18.csv", quote=F)
+
+top5<- cluster_markers_tbx18 %>% group_by(cluster) %>% top_n(n = 5, wt = avg_log2FC)
+DoHeatmap(seurat_tbx18, features = top5$gene)
+```
+
+
+Figure 4e-f
+```{r}
+#Figure 4e
+FeaturePlot_scCustom(seurat_tbx18, features = "Spp1", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Cldn5", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Cd34", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Acta2", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Abcc9", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Vtn", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Pdgfrb", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "C1qa", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Col1a1", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Col15a1", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Sox2", na_color = "lightgrey")
+```
+
+#Sup figure 4b
+```{r}
+FeaturePlot_scCustom(seurat_tbx18, features = "Vim", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Dbi", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Mki67", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Smc2", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Tpx2", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Nusap1", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Cdca8", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Top2a", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Hmgb2", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_tbx18, features = "Fabp7", na_color = "lightgrey")
+```
+
+
+```{r}
+seurat_4 <- subset(seurat_tbx18,idents=c("4"))
+seurat_4 <- SCTransform(seurat_4, vars.to.regress="percent.mito")
+seurat_4 <- RunPCA(seurat_4, verbose=F)
+seurat_4 <- RunUMAP(seurat_4, dims=1:15)
+seurat_4 <- FindNeighbors(seurat_4, dims=1:15)
+seurat_4 <- FindClusters(seurat_4, resolution=0.1)
+
+#Figure 4h
+DimPlot(seurat_4)
+
+#Figure 4i-j
+palette <- c("#F8766D",  "#A3A500","#00BF7D", "#00B0F6",  "#E76BF3")
+DimPlot(seurat_4, cols = palette)
+
+stroke_4 <- subset(seurat_4, orig.ident == 'stroke_tbx18')
+palette <- c("#F8766D", "#00BF7D", "#00B0F6",  "#E76BF3")
+DimPlot(stroke_4, cols = palette)
+
+naive_4 <- subset(seurat_4, orig.ident == 'naive_tbx18')
+palette <- c( "#A3A500","#00BF7D", "#00B0F6")
+DimPlot(naive_4, cols = palette)
+
+nonstroke_4 <- subset(seurat_4, orig.ident == 'nonstroke_tbx18')
+palette <- c("#F8766D",  "#A3A500","#00BF7D", "#00B0F6",  "#E76BF3")
+DimPlot(nonstroke_4, cols = palette)
+
+
+prop.table(table(Idents(naive_4)))
+prop.table(table(Idents(nonstroke_4)))
+prop.table(table(Idents(stroke_4)))
+DimPlot(seurat_4, split.by = "orig.ident")
+
+#Figure 4k
+FeaturePlot_scCustom(seurat_4, features = "Cldn5", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_4, features = "Acta2", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_4, features = "Vtn", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_4, features = "Rgs5", na_color = "lightgrey")
+FeaturePlot_scCustom(seurat_4, features = "C1qa", na_color = "lightgrey")
+```
+```{r}
+cluster_markers_tbx18 <- FindAllMarkers(seurat_4,
+                                    logfc.threshold = 0.25,
+                                    only.pos = T)
+top100<-cluster_markers_tbx18 %>%
+    group_by(cluster)%>%
+    top_n(100,avg_log2FC)
+write.csv(top100, file="../Output/final files/cluster_markers_tbx18cluster4.csv", quote=F)
+
+top5<- cluster_markers_tbx18 %>% group_by(cluster) %>% top_n(n = 5, wt = avg_log2FC)
+DoHeatmap(seurat_4, features = top5$gene)
+```
+
+```{r}
+#if (!requireNamespace("BiocManager", quietly = TRUE))
+#install.packages("BiocManager")
+#BiocManager::install(version = "3.17")
+#BiocManager::install(c('BiocGenerics','DelayedArray','DelayedMatrixStats','limma','lme4','S4Vectors','SingleCellExperiment','SummarizedExperiment','batchelor', 'HDF5Array','terra','ggrastr'))
+#install.packages("devtools")
+#install.packages("R.utils")
+#devtools::install_github('cole-trapnell-lab/monocle3')
+#remotes::install_github('satijalab/seurat-wrappers')
+library(Seurat)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(monocle3)
+library(SeuratWrappers)
+```
+
+#Monocle
+```{r}
+seurat_tbx18_mon <- readRDS("/Users/allisonloan/Documents/PhD Work/Stroke Single-Cell seq Analysis/Output/final files/seurat_processed_stroketbx18.rds")
+DefaultAssay(seurat_tbx18_mon) <- "integrated"
+```
+
+#Figure 4g
+```{r}
+#seurat_tbx18_mon <-  subset(seurat_tbx18_mon,idents=c("0","1","2","3","4","5","6","7","8"))
+cds <- as.cell_data_set(seurat_tbx18_mon)
+cds
+colData(cds)
+fData(cds)
+rownames(fData(cds))[1:10]
+
+# since it misses the gene_short_name column, let's add it
+fData(cds)$gene_short_name <- rownames(fData(cds))
+
+# to get counts
+counts(cds)
+
+# assign paritions
+reacreate.partition <- c(rep(1,length(cds@colData@rownames)))
+names(reacreate.partition) <- cds@colData@rownames
+reacreate.partition <- as.factor(reacreate.partition)
+cds@clusters$UMAP$partitions <- reacreate.partition
+
+# Assign the cluster info 
+
+list_cluster <- seurat_tbx18_mon@active.ident
+cds@clusters$UMAP$clusters <- list_cluster
+
+# Assign UMAP coordinate - cell embeddings
+
+cds@int_colData@listData$reducedDims$UMAP <- seurat_tbx18_mon@reductions$umap@cell.embeddings
+
+# ...3. Learn trajectory graph ------------------------
+cds <- learn_graph(cds, use_partition = FALSE)
+
+plot_cells(cds,
+           color_cells_by = 'cluster',
+           label_groups_by_cluster = FALSE,
+           label_branch_points = FALSE,
+           label_roots = FALSE,
+           label_leaves = FALSE,
+           group_label_size = 5)
+
+# ...4. Order the cells in pseudotime -------------------
+cds <- order_cells(cds, reduction_method = 'UMAP', root_cells = colnames(cds[,clusters(cds) == c(3,5)]))
+
+plot_cells(cds,
+           color_cells_by = 'pseudotime',
+           label_groups_by_cluster = FALSE,
+           label_branch_points = FALSE,
+           label_roots = F,
+           label_leaves = FALSE)
+```
+
+#GO
+```{r}
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("clusterProfiler", force = T)
+
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("AnnotationDbi")
+
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("org.Mm.eg.db")
+library(enrichplot)
+library(clusterProfiler)
+library(org.Mm.eg.db)
+library(AnnotationDbi)
+  if (!requireNamespace('BiocManager', quietly = TRUE))
+    install.packages('BiocManager')
+
+  BiocManager::install('EnhancedVolcano')
+devtools::install_github('kevinblighe/EnhancedVolcano')
+library(EnhancedVolcano)
+library(Seurat)
+install.packages("dplyr")
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r}
+c0v4 <- FindMarkers(seurat_tbx18, ident.1 = "0", ident.2= "4")
+write.csv(c0v4, file="../Output/final files/c0v4_deg_tbx18.csv", quote=F)
+
+#Sup Figure 4c
+EnhancedVolcano(c0v4, 
+                rownames(c0v4),
+                x ="avg_log2FC", 
+                y ="p_val_adj")
+
+#Sup Figure 4d
+genec0v4 <- rownames(c0v4[c0v4$avg_log2FC > .25 & c0v4$p_val_adj < 0.05,])
+GOresultsc0v4bp <- enrichGO(gene = genec0v4 , OrgDb = "org.Mm.eg.db", keyType = "SYMBOL", ont = "BP")
+
+
+barplot(GOresultsc0v4bp)
+```
+
+#NCBI submission
+```{r}
+write.csv(as.matrix(seurat_tbx18[["RNA"]]@counts), file="../umi_matrix_tbx18.csv")
+
+seurat_tbx18 = subset(seurat_tbx18@meta.data, select =
+-c(integrated_snn_res.0.7,integrated_snn_res.0.1,integrated_snn_res.0.2,integrated_snn_res.0.3,integrated_snn_res.0.5))
+write.csv(as.matrix(seurat_tbx18), file="../metadata_tbx18.csv")
+```
+
